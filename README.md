@@ -16,6 +16,7 @@ if `r2.diff(r1).doIntersect(".*")`  and `r1.doIntersect(r2)`, then r1 is a subse
 the opposite of a regex can be found by diffing Regex(".*").diff(myRegex)
 
 ```scala
+import dregex.Regex
 ("*.filtered.fastq" -> "*.fastq",
 "whatever" -> "*_R1_*.filtered.fastq") // this rule requires "*.filtered.fastq"
 val Seq(r1, r2) = Regex.compile(Seq("a", "[ab]"))
@@ -23,6 +24,8 @@ r2._2.diff(r1._2).matches("b")
 
 // Regexes that are compared must be built in the same "universe"
 
+import dregex.Regex
+val (r1, r2) = 
 scala> r1.diff(r2).matches("fR1f.fastq")
 res19: Boolean = false
 
@@ -71,7 +74,7 @@ a() = 4 // change a, now jobMap has changed
 
 Additionally, it's easy to make a rule depend in some way on user options:
 
-```
+```scala
 val opts = Map('mapper -> 'bwa
 val Mapper:JobGraph = Map(
    ("paired.bam", List("*.fastq", opts.get('mapper)) -> 
@@ -81,6 +84,24 @@ val Mapper:JobGraph = Map(
         )
 ```
 
+###Command line and Settings integration
+see config.scala. Jackson can conver yaml to json.
+
+
+###Union types
+```scala
+import com.gensler.scalavro.util.Union
+import com.gensler.scalavro.util.Union.{ union, prove }
+
+type ISB = union[Int]#or[String]#or[Boolean]
+
+def f[T: prove[ISB]#containsType](t: T) {
+  t match {
+    case x:Int => println(x)
+    case x:Boolean => println(1)
+    case x:String => println(x.length) } }
+}
+```
 #Resources 
 Union types: http://stackoverflow.com/questions/3508077/how-to-define-type-disjunction-union-types#comment26966453_6312508
 
@@ -96,3 +117,9 @@ pimp my library
 http://www.artima.com/weblogs/viewpost.jsp?thread=179766
 
 http://twitter.github.io/effectivescala/
+
+#Notes
+- unary operators ~"*.scala"
+
+- String interpolation macro for paths or regexes. https://www.safaribooksonline.com/blog/2013/12/20/scala-macros-that-wont-kill-you/
+- json/yaml "net.liftweb" %% "lift-json" % "2.6"
