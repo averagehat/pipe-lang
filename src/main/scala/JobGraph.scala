@@ -1,10 +1,10 @@
-import java.util.{Some,None,Left,Right,Either}
+import scala.util.{Some,None,Left,Right,Either}
 import make.os.ProjectError
 import com.gensler.scalavro.util.Union
 import com.gensler.scalavro.util.Union.{ union, prove }
 import dregex.Regex
 
-
+{case (a::b::c)}
 type Files = List[Path]
 type JobFunc = (Files, Files) => Unit
 type JobGraph = Map[Map[Files, Files], (Files, Files) => Unit]
@@ -47,7 +47,7 @@ class JobMap extends Map {
         if (hasPreds.isEmpty) done else sys.error(hasPreds.toString)
       } else {
           val found = noPreds.map { _._1 }
-          tsort(hasPreds.mapValues { _ -- found }, done ++ found)    
+          tsort(hasPreds.mapValues { _ -- found }, done ++ found)
       }
     }
   

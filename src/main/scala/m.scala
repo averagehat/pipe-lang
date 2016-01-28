@@ -1,1 +1,4 @@
-object Hi { def main(args: Array[String]) = println("Hi!") }
+object Hi {
+
+  implicit class Tupleish()
+  def main(args: Array[String]) = println("Hi!") }
