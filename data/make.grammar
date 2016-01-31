@@ -1,0 +1,38 @@
+file       : (requires | import)+ NL* (rule NL* | comment NL*)+ NL*
+requires   : <'exec'> module NL+
+import     : <'import'> module NL+
+comment   : <'#'> anything
+rule       : ruleHeader ((pyTag NL pythonBlock) | (bashTag? NL bashBlock))
+<pyTag>      : <'['> 'python' <']'>
+<bashTag>     : <'['> 'bash' <']'>
+ruleHeader : (targets (<arrow> dependencies)?)
+<targets>    : (target | target <','> targets)
+target     : filename / extension / glob
+<dependencies> : (dependency | dependency <','> dependencies)
+dependency : (maybeDep | reduceDep | complexDep | orderDependency | dependencyTerm)
+complexDep : '(' dependency binaryOp dependency ')'
+maybeDep   : <'?'> dependency
+reduceDep  : <'%'> dependency
+binaryOp   :  OR  | XOR | AND
+XOR        :  XOR
+orderDependency : '<' filename '>'
+regex           : <'~'> #'[^\s\n/]' regexChar+
+regexChar : #'[^\s\n]'
+<dependencyTerm> : extension / filename / glob / regex
+pythonBlock : codeline+
+bashBlock   : codeline+
+arrow      : <'<-'>
+extension : '.' filename
+module   : filename
+lang : 'python' | 'bash'
+codeline : <'\t'> #'[^\n]+' NL
+OR         :  'OR'
+AND        :   ','
+<NL>         :  <'\n'>
+<anything>   :  #'[^\n]+'
+<alpha> : ( 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z' )
+<legal> : alpha | '_' | '1' | '2' | '3' | '4' | '5'
+<globchars> : legal | '*' | '[' | '?' | ']' | '!' | '.'
+glob     : globchars+
+filename : (legal)  (legal | '.')+
+<WS> : #'\s+' 
