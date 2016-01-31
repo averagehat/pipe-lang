@@ -103,6 +103,8 @@ def f[T: prove[ISB]#containsType](t: T) {
 }
 ```
 #Resources 
+convert grammars:  http://bottlecaps.de/convert/
+
 Union types: http://stackoverflow.com/questions/3508077/how-to-define-type-disjunction-union-types#comment26966453_6312508
 
 regex inclusion problem:
