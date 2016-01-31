@@ -2,14 +2,14 @@ name := "hello"
 
 version := "1.0"
 
-scalaVersion := "2.10.2"
-
-
+//scalaVersion := "2.10.2"
+scalaVersion := "2.11.7"
 
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.2.0"
 
 libraryDependencies += "com.github.marianobarrios" %% "dregex_2.11" % "0.2-SNAPSHOT"
 
+libraryDependencies += "org.clojure" % "clojure" % "1.6.0"
 
 
 //resolvers += "Sonatype snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
