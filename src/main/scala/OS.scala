@@ -1,62 +1,65 @@
+package make
+import java.nio.file.{Paths, Files}
+import java.io.File
+import scala.util.matching.Regex
+import scala.util.parsing.json._
 
+object OS {
+  import sys.process._
+  def makeTmpFile =
+    java.nio.file.Files.createTempFile(java.nio.file.Paths.get(
+      System.getProperty("java.io.tmpdir")), "pipelang", ".py")
 
+  def runScript(interpreter: String)(contents :String) :Unit = {
+    val path = makeTmpFile.getFileName().toString()
+    scala.tools.nsc.io.File(path).writeAll(contents)
+    f"$interpreter $path".!
+    f"rm $path".!!
+  }
+  val runBash = runScript("bash")
+  val runPython = runScript("python")
 
-//Path operators
-implicit class Iff(val fs: Seq[Path]) extends AnyVal { 
-  
-  def fileReg (s:String) = ("(" ++ s.replaceAll("\\.", "\\.").replaceAll("\\*", ".*") ++ ")").r
-  
-  val noExt =  ((x:String) => x.split('.').init.mkString(".")) 
-  
-  val swapExt = ( (s:String, ext:String) => (noExt(s)) ++ "." ++ ext)
-  
-  def dirname (p:Path) : Path = p.segments.init match { 
-    case Vector() => wd; 
-    case xs       => Path("/" ++ xs.mkString("/")) }
+def getStateDeps(depName: String): Option[Boolean] = {
+  val statePath = Paths.get(sys.env("HOME"), ".pipelang", "state.json").toFile
+  val str = scala.io.Source.fromFile(statePath).mkString
+  for {
+    json <- JSON.parseFull(str).asInstanceOf[Option[Map[String, Map[String, Boolean]]]]
+    deps <- json.get("orderDependencies")
+    done <- deps.get(depName)
+  } yield done // should throw error
+  }
 
-  def %- = a => fs.map(dirname(a)/noExt(a.last))
-  def %= (b: String) : Seq[Path]  = fs.map( a => dirname(a)/swapExt(a.last, b))
-  def %+ (b: String) : Seq[Path]  = fs.map( a => dirname(a)/(a.last ++ "." ++ b))
-  def ~= (b: String) : Seq[Path] = fs.filter(a => fileReg(b).unapplySeq(a.last).isDefined)
-  def ~/ (b: String) : Seq[Path] = fs.filterNot(a => fileReg(b).unapplySeq(a.last).isDefined)
-        }
+  def lsGlob(glob: String): List[String] =  Seq("bash", "-c", f"ls $glob").!!.split("\n").toList
 
+  def lsRecursive(dir: File): List[File] =  {
+    val these = dir.listFiles.toList
+    these ++ these.filter(_.isDirectory).flatMap(lsRecursive)
+  }
 
-object OS { 
-  def FS(fs:String*): List[RelPath] = fs.map(RelPath(_)).toList
-  def makeTmpFile = java.nio.file.Files.createTempFile(      java.nio.file.Paths.get(System.getProperty                           ("java.io.tmpdir")), "ammonite", ".py")
+  def doesMatch(re: Regex, s: String): Boolean = re.findFirstIn(s.toCharArray).nonEmpty
 
- // make a version that save stdout 
-  def py(s :String) :Unit = {
-    for { 
-      file <- Try(Path(makeTmpFile))
-      _ <- Try(write(file, s))
-      result <- Try(%%('python, file))
-      _ <- Try(rm! file) } yield result }
- 
-//    val file = Path(makeTmpFile)
-//    write(file, s)
-//    val ret = Try(%%('python, file))
-//    rm! file 
-//    ret
-  
-  val runPython = (List("python","-c",_:String)) andThen ( x => Try(%%(x)))
-}  
+  def lsRegex(re: Regex): List[String] =
+    lsRecursive(new File(".")).map(_.getName).filter(doesMatch(re, _))
 
-//Map(NoSuchFileException -> (x) => PathNotExist(Path(x.getFile)) )
+  def globToRegex(glob: List[Char]): List[String] = {
+    def escape(c: Char): String = {
+      val regexChars = "\\+()^$.{}]|"
+      if (regexChars.contains(c)) f"\\$c" else f"$c"
+    }
 
-//@example 
-//val sffs = (ls!) ~= "*.sff")
-//val fastqs = ( (ls!) ~= "*.fastq" ) ++ (sffs %= "fastq")
-//val unpaired = (ls!) ~/ "*_R[12]_*.fastq" ++ (sffs %= "fastq")
-//val paired = (ls!) ~= "*_R[12]_*.fastq"
+    def charClass(cs: List[Char]): List[String] = cs match {
+      case (']' :: cs) => "]" :: globToRegex(cs)
+      case (c :: cs) => c.toString :: charClass(cs)
+      case Nil => throw new RuntimeException("untermined [ in glob")
+    }
 
-
-
-abstract class ProjectError
-abstract class OSError extends ProjectError
-case class PathNotExist(p: Path) extends OSError
-case class PathAlreadyExist(p: Path) extends OSError
-case class ExecNotExist(s: String) extends OSError
-case class NonZeroReturnCode(s: Stirng, code: Int) extends OSError
+    glob match {
+      case ('*' :: t)       => "[^/]+" :: globToRegex(t)
+      case ('?' :: t)       => "." :: globToRegex(t)
+      case ('['::'!'::c::t) => "[^" :: c.toString :: charClass(t)
+      case '[' :: t         => throw new RuntimeException(f"untermined [ in glob $glob")
+      case (c :: t)         => (escape (c) ) :: globToRegex (t)
+    }
+  }
+}
 
