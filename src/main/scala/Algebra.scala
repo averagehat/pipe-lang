@@ -1,17 +1,13 @@
 package make
 /**
-  * Created by michaelpanciera on 1/26/16.
-  */
-/**
   * Created by michaelpanciera on 1/25/16.
-  */
+  **/
 import dregex.Regex // not on Maven/Ivy
 import scalaz._
 import java.nio.file.{Paths, Files}
-import scala.util.matching.Regex
 import Scalaz._
-import sys.process._
 
+// with ensime can drop into sbt session after a compile and enter the console
 package object types {
   type Inputs = List[Target]
   type Outputs = List[Target]
@@ -21,25 +17,23 @@ import types._
 // an effect has a way of determining that it has existed or not.
 // and it has some kind of name, I suppose.
 trait Target {
-  import OS._
+  import make.OS._
 
   def getStartFiles: List[FileTarget] = this match {
     case RegexTarget(re) => lsRegex(re).map(FileTarget(_))
-    //case GlobTarget(s)  => lsGlob(s).map(FileTarget(_))
     case ft @ FileTarget(s)  => if (satisfied) List(ft) else List()
   }
 
   def satisfied: Boolean = this match {
     case FileTarget(fn) => Files.exists(Paths.get(fn))
     case OrderTarget(name) => getStateDeps(name).getOrElse(false)
-    //case other => getStartFiles.flatMap(_.nonEmpty).getOrElse(false)
     case other => getStartFiles.nonEmpty
   }
   def isSubset(other: Target): Boolean = (this, other) match {
     case (FileTarget(fn1), FileTarget(fn2)) => fn1 == fn2
-    case (FileTarget(fn1), RegexTarget(re)) => doesMatch(re, fn1)
+    case (FileTarget(fn1), RegexTarget(re)) => re matches fn1
     case (RegexTarget(r1), RegexTarget(r2)) => r1 isSubsetOf r2
-    case (FileTarget(_), RegexTarget(_))    => false
+    case (RegexTarget(_), FileTarget(_))    => false
   }
 }
 
@@ -122,7 +116,7 @@ case class PythonScript(content: String) extends Script
 //
 
 object Graph {
-  import OS._
+
 
   def genConcreteTasks(tasks: List[Task]) = {
     // the below doesn't actually work. We need to generate all the concrete inputs 
@@ -138,8 +132,8 @@ object Graph {
         val outTemplate = "$1" + o.dropWhile (_!= '.')
         s.replaceFirst(matchGroup, outTemplate)
       }
-  val equalSort = topologicalSort((x,y) => y.outputs.contains(x))
-  val noramalSort = topologicalSort((tgt, task) => (task.outputs.any(tgt.isSubset(_))))
+  val equalSort = topologicalSort((x,y) => y.outputs.contains(x)) _
+  val noramalSort = topologicalSort((tgt, task) => (task.outputs.any(tgt.isSubset(_)))) _
 //    val withRegexSort = topologicalSort(
 //      (tgt, task) => (task.outputs.contains(tgt) ||
 //                        tgt.outputs.any(isRegexSubset(tgt, _))))
